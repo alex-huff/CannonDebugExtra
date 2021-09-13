@@ -61,9 +61,13 @@ public class CDChannel extends PluginChannel {
             if (this.historyBuilder.isReady()) {
                 CDHistory history = this.historyBuilder.getHistory();
 
-                ForkJoinPool.commonPool().execute(
-                    () -> ExcelManager.viewAsExcel(history)
-                );
+                try {
+                    ExcelManager.historyQueue.put(history);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
