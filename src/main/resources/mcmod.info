@@ -1,0 +1,16 @@
+[
+  {
+    "modid": "cannondebugextra",
+    "name": "CannonDebug Extras",
+    "description": "Client mod for servers with the CannonDebug fork by phonis.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["phonis"],
+    "credits": "Jesus Christ",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
