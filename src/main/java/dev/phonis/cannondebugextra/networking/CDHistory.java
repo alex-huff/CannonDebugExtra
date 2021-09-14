@@ -9,9 +9,11 @@ import java.util.List;
 public class CDHistory implements CDSerializable {
 
     public final List<CDBlockSelection> selections;
+    public final boolean byOrder;
 
-    public CDHistory(List<CDBlockSelection> selections) {
+    public CDHistory(List<CDBlockSelection> selections, boolean byOrder) {
         this.selections = selections;
+        this.byOrder = byOrder;
     }
 
     @Override
@@ -21,6 +23,8 @@ public class CDHistory implements CDSerializable {
         for (CDBlockSelection selection : this.selections) {
             selection.toBytes(dos);
         }
+
+        dos.writeBoolean(this.byOrder);
     }
 
     public static CDHistory fromBytes(DataInputStream dis) throws IOException {
@@ -31,7 +35,7 @@ public class CDHistory implements CDSerializable {
             selections.add(CDBlockSelection.fromBytes(dis));
         }
 
-        return new CDHistory(selections);
+        return new CDHistory(selections, dis.readBoolean());
     }
 
 }
