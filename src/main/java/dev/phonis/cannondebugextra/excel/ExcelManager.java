@@ -1,9 +1,6 @@
 package dev.phonis.cannondebugextra.excel;
 
-import dev.phonis.cannondebugextra.networking.CDBlockSelection;
-import dev.phonis.cannondebugextra.networking.CDHistory;
-import dev.phonis.cannondebugextra.networking.CDLocation;
-import dev.phonis.cannondebugextra.networking.CDVec3D;
+import dev.phonis.cannondebugextra.networking.*;
 import dev.phonis.cannondebugextra.util.NumberUtils;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -22,6 +19,9 @@ public class ExcelManager {
 
     public static final BlockingQueue<CDHistory> historyQueue = new LinkedBlockingQueue<>();
     private static final File excelFolder = new File("cannondebug/");
+    private static final String TNTString = "TNT";
+    private static final String fallingBlockString = "SAND";
+    private static final String otherString = "OTHER";
 
     static {
         if (excelFolder.mkdirs()) System.out.println("Creating excel directory.");
@@ -53,14 +53,15 @@ public class ExcelManager {
             XSSFRow startRow = spreadsheet.createRow(0);
 
             startRow.createCell(0).setCellValue("Tick");
-            startRow.createCell(1).setCellValue("X");
-            startRow.createCell(2).setCellValue("Y");
-            startRow.createCell(3).setCellValue("Z");
-            startRow.createCell(4).setCellValue("X Velocity");
-            startRow.createCell(5).setCellValue("Y Velocity");
-            startRow.createCell(6).setCellValue("Z Velocity");
-            startRow.createCell(7).setCellValue("XZ 1x1");
-            startRow.createCell(8).setCellValue("Y 1x1");
+            startRow.createCell(1).setCellValue("Entity Type");
+            startRow.createCell(2).setCellValue("X");
+            startRow.createCell(3).setCellValue("Y");
+            startRow.createCell(4).setCellValue("Z");
+            startRow.createCell(5).setCellValue("X Velocity");
+            startRow.createCell(6).setCellValue("Y Velocity");
+            startRow.createCell(7).setCellValue("Z Velocity");
+            startRow.createCell(8).setCellValue("XZ 1x1");
+            startRow.createCell(9).setCellValue("Y 1x1");
 
             for (int i = 1; i < selection.tracker.locationHistory.size() + 1; i++) {
                 CDLocation location = selection.tracker.locationHistory.get(i - 1);
@@ -68,6 +69,22 @@ public class ExcelManager {
                 XSSFRow row = spreadsheet.createRow(i);
                 boolean xz1x1 = false;
                 boolean y1x1 = false;
+                String typeString;
+
+                switch (selection.tracker.entityType) {
+                    case TNT:
+                        typeString = ExcelManager.TNTString;
+
+                        break;
+                    case FALLINGBLOCK:
+                        typeString = ExcelManager.fallingBlockString;
+
+                        break;
+                    default:
+                        typeString = ExcelManager.otherString;
+
+                        break;
+                }
 
                 if (NumberUtils.isInsideCube(location.x) && NumberUtils.isInsideCube(location.z) ||
                     Math.abs(velocity.x) != 0.0 && NumberUtils.isInsideCube(location.x) ||
@@ -80,14 +97,15 @@ public class ExcelManager {
                 }
 
                 row.createCell(0).setCellValue(selection.tracker.spawnTick + (i - 1));
-                row.createCell(1).setCellValue(location.x);
-                row.createCell(2).setCellValue(location.y);
-                row.createCell(3).setCellValue(location.z);
-                row.createCell(4).setCellValue(velocity.x);
-                row.createCell(5).setCellValue(velocity.y);
-                row.createCell(6).setCellValue(velocity.z);
-                row.createCell(7).setCellValue(xz1x1);
-                row.createCell(8).setCellValue(y1x1);
+                row.createCell(1).setCellValue(typeString);
+                row.createCell(2).setCellValue(location.x);
+                row.createCell(3).setCellValue(location.y);
+                row.createCell(4).setCellValue(location.z);
+                row.createCell(5).setCellValue(velocity.x);
+                row.createCell(6).setCellValue(velocity.y);
+                row.createCell(7).setCellValue(velocity.z);
+                row.createCell(8).setCellValue(xz1x1);
+                row.createCell(9).setCellValue(y1x1);
             }
         }
 
