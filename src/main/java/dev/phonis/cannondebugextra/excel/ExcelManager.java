@@ -109,7 +109,7 @@ public class ExcelManager {
             }
 
             XSSFDrawing drawing = spreadsheet.createDrawingPatriarch();
-            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 10, 0, 30, 20);
+            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 10, 0, 30, 40);
             XSSFChart chart = drawing.createChart(anchor);
 
             chart.setTitleText("Entity Velocity");
