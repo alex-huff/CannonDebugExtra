@@ -2,9 +2,9 @@ package dev.phonis.cannondebugextra.excel;
 
 import dev.phonis.cannondebugextra.networking.*;
 import dev.phonis.cannondebugextra.util.NumberUtils;
-import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xddf.usermodel.chart.*;
+import org.apache.poi.xssf.usermodel.*;
 
 import java.awt.*;
 import java.io.File;
@@ -107,6 +107,54 @@ public class ExcelManager {
                 row.createCell(8).setCellValue(xz1x1);
                 row.createCell(9).setCellValue(y1x1);
             }
+
+            XSSFDrawing drawing = spreadsheet.createDrawingPatriarch();
+            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 10, 0, 30, 20);
+            XSSFChart chart = drawing.createChart(anchor);
+
+            chart.setTitleText("Entity Velocity");
+
+            XDDFChartLegend legend = chart.getOrAddLegend();
+            XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
+
+            bottomAxis.setTitle("Tick");
+
+            XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
+
+            leftAxis.setTitle("Velocity");
+
+            XDDFCategoryDataSource categoryDataSource = XDDFDataSourcesFactory.fromStringCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 0, 0)
+            );
+            XDDFNumericalDataSource<Double> xDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 5, 5)
+            );
+            XDDFNumericalDataSource<Double> yDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 6, 6)
+            );
+            XDDFNumericalDataSource<Double> zDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 7, 7)
+            );
+            XDDFChartData data = chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
+
+            legend.setPosition(LegendPosition.BOTTOM);
+            data.addSeries(
+                categoryDataSource,
+                xDataSource
+            ).setTitle("X", null);
+            data.addSeries(
+                categoryDataSource,
+                yDataSource
+            ).setTitle("Y", null);
+            data.addSeries(
+                categoryDataSource,
+                zDataSource
+            ).setTitle("Z", null);
+            chart.plot(data);
         }
 
         try {
