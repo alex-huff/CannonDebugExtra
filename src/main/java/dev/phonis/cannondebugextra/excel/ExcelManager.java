@@ -45,6 +45,7 @@ public class ExcelManager {
         if (history.selections.size() == 0) return;
 
         XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFFormulaEvaluator formulaEvaluator = new XSSFFormulaEvaluator(workbook);
 
         if (history.byOrder) history.selections.sort(Comparator.comparingLong((CDBlockSelection o) -> o.tracker.spawnTick).thenComparingInt(blockSelection -> blockSelection.order));
 
@@ -60,8 +61,9 @@ public class ExcelManager {
             startRow.createCell(5).setCellValue("X Velocity");
             startRow.createCell(6).setCellValue("Y Velocity");
             startRow.createCell(7).setCellValue("Z Velocity");
-            startRow.createCell(8).setCellValue("XZ 1x1");
-            startRow.createCell(9).setCellValue("Y 1x1");
+            startRow.createCell(8).setCellValue("Total Velocity");
+            startRow.createCell(9).setCellValue("XZ 1x1");
+            startRow.createCell(10).setCellValue("Y 1x1");
 
             for (int i = 1; i < selection.tracker.locationHistory.size() + 1; i++) {
                 CDLocation location = selection.tracker.locationHistory.get(i - 1);
@@ -104,12 +106,17 @@ public class ExcelManager {
                 row.createCell(5).setCellValue(velocity.x);
                 row.createCell(6).setCellValue(velocity.y);
                 row.createCell(7).setCellValue(velocity.z);
-                row.createCell(8).setCellValue(xz1x1);
-                row.createCell(9).setCellValue(y1x1);
+
+                XSSFCell formulaCell = row.createCell(8);
+
+                formulaCell.setCellFormula("SQRT(POWER(F" + (i + 1) + ", 2)+POWER(G" + (i + 1) + ", 2)+POWER(H" + (i + 1) + ", 2))");
+                formulaEvaluator.evaluate(formulaCell);
+                row.createCell(9).setCellValue(xz1x1);
+                row.createCell(10).setCellValue(y1x1);
             }
 
             XSSFDrawing drawing = spreadsheet.createDrawingPatriarch();
-            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 10, 0, 30, 40);
+            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 11, 0, 31, 40);
             XSSFChart chart = drawing.createChart(anchor);
 
             chart.setTitleText("Entity Velocity");
@@ -139,6 +146,10 @@ public class ExcelManager {
                 spreadsheet,
                 new CellRangeAddress(1, selection.tracker.locationHistory.size(), 7, 7)
             );
+            XDDFNumericalDataSource<Double> totalDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 8, 8)
+            );
             XDDFChartData data = chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
 
             legend.setPosition(LegendPosition.BOTTOM);
@@ -154,7 +165,12 @@ public class ExcelManager {
                 categoryDataSource,
                 zDataSource
             ).setTitle("Z", null);
+            data.addSeries(
+                categoryDataSource,
+                totalDataSource
+            ).setTitle("Total", null);
             chart.plot(data);
+            formulaEvaluator.clearAllCachedResultValues();
         }
 
         try {
