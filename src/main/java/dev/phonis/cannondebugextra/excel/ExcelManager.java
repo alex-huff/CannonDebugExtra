@@ -1,5 +1,6 @@
 package dev.phonis.cannondebugextra.excel;
 
+import dev.phonis.cannondebugextra.CannonDebugExtra;
 import dev.phonis.cannondebugextra.event.ChatManager;
 import dev.phonis.cannondebugextra.networking.*;
 import dev.phonis.cannondebugextra.util.ImmutablePair;
@@ -48,9 +49,13 @@ public class ExcelManager {
         }
     }
 
+    private static void logToPlayer(String message) {
+        ChatManager.messageQueue.add(CannonDebugExtra.prefix + message);
+    }
+
     public static void viewAsExcel(CDHistory history) {
         if (history.selections.size() == 0) {
-            ChatManager.messageQueue.add("Cannot open spreadsheet! empty cannondebug history.");
+            ExcelManager.logToPlayer("Cannot open spreadsheet! empty cannondebug history.");
 
             return;
         }
@@ -88,7 +93,7 @@ public class ExcelManager {
             hyperLinks.add(new ImmutablePair<>(refName, hyperlink));
         }
 
-        ChatManager.messageQueue.add("Starting conversion... 0%");
+        ExcelManager.logToPlayer("Starting conversion... 0%");
 
         int p = 0;
 
@@ -99,7 +104,7 @@ public class ExcelManager {
             if (progress > (p + 10)) {
                 p = progress - (progress % 10);
 
-                ChatManager.messageQueue.add(p + "%");
+                ExcelManager.logToPlayer(p + "%");
             }
 
             XSSFSheet spreadsheet = workbook.createSheet(history.byOrder ? ("Tick" + selection.tracker.spawnTick + " OOE" + selection.order) : Integer.toString(selection.id));
@@ -164,8 +169,8 @@ public class ExcelManager {
                 ExcelManager.addLinks(history, spreadsheet, hyperLinks);
         }
 
-        ChatManager.messageQueue.add("Finished conversion... 100%");
-        ChatManager.messageQueue.add("Writing to file...");
+        ExcelManager.logToPlayer("Finished conversion... 100%");
+        ExcelManager.logToPlayer("Writing to file...");
 
         try {
             File excelFile = new File(ExcelManager.excelFolder, "history" + UUID.randomUUID().toString().replace("-", "") + ".xlsx");
@@ -174,10 +179,10 @@ public class ExcelManager {
             workbook.write(fileOut);
             fileOut.close();
 
-            ChatManager.messageQueue.add("Done. Opening file.");
+            ExcelManager.logToPlayer("Done. Opening file.");
             Desktop.getDesktop().open(excelFile);
         } catch (IOException e) {
-            ChatManager.messageQueue.add("Failed to write to file!");
+            ExcelManager.logToPlayer("Failed to write to file!");
 
             e.printStackTrace();
         }
