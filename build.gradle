@@ -110,4 +110,5 @@ shadowJar {
     relocate 'org.apache', 'shaded.apache'
 }
 
-project.tasks.build.dependsOn shadowJar
+// must shadow before reobfJar or Minecraft will be wrong
+project.tasks.reobfJar.dependsOn shadowJar

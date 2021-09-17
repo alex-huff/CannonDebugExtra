@@ -1,6 +1,8 @@
 package dev.phonis.cannondebugextra;
 
+import dev.phonis.cannondebugextra.event.ChatManager;
 import dev.phonis.cannondebugextra.networking.CDChannel;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -15,6 +17,7 @@ public class CannonDebugExtra {
     @EventHandler
     public void init(FMLInitializationEvent event) {
         CDChannel.initialize();
+        MinecraftForge.EVENT_BUS.register(new ChatManager());
     }
 
 }

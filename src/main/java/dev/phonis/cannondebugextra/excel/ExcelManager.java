@@ -1,7 +1,13 @@
 package dev.phonis.cannondebugextra.excel;
 
+import dev.phonis.cannondebugextra.event.ChatManager;
 import dev.phonis.cannondebugextra.networking.*;
+import dev.phonis.cannondebugextra.util.ImmutablePair;
 import dev.phonis.cannondebugextra.util.NumberUtils;
+import dev.phonis.cannondebugextra.util.Pair;
+import org.apache.poi.common.usermodel.HyperlinkType;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Hyperlink;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.usermodel.*;
@@ -10,7 +16,9 @@ import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -42,14 +50,44 @@ public class ExcelManager {
     }
 
     private static void viewAsExcel(CDHistory history) {
-        if (history.selections.size() == 0) return;
+        if (history.selections.size() == 0) {
+            ChatManager.messageQueue.add("Cannot open spreadsheet! empty cannondebug history.");
+
+            return;
+        }
 
         XSSFWorkbook workbook = new XSSFWorkbook();
         XSSFFormulaEvaluator formulaEvaluator = new XSSFFormulaEvaluator(workbook);
+        CreationHelper createHelper = workbook.getCreationHelper();
 
         if (history.byOrder) history.selections.sort(Comparator.comparingLong((CDBlockSelection o) -> o.tracker.spawnTick).thenComparingInt(blockSelection -> blockSelection.order));
 
+        List<Pair<String, Hyperlink>> hyperLinks = new ArrayList<>(history.selections.size());
+
+        for (int h = 0; h < history.selections.size(); h++) {
+            CDBlockSelection selection = history.selections.get(h);
+            Hyperlink hyperlink = createHelper.createHyperlink(HyperlinkType.DOCUMENT);
+            String refLink =  history.byOrder ? ("Tick" + selection.tracker.spawnTick + " OOE" + selection.order) : Integer.toString(selection.id);
+            String refName = history.byOrder ? ("OOE" + selection.order) : ("ID" + selection.id);
+
+            hyperlink.setAddress("'" + refLink + "'!A1");
+            hyperLinks.add(new ImmutablePair<>(refName, hyperlink));
+        }
+
+        ChatManager.messageQueue.add("Starting conversion... 0%");
+
+        int s = 0;
+        int p = 0;
+
         for (CDBlockSelection selection : history.selections) {
+            int progress = (int) ((s / (double) history.selections.size()) * 100);
+
+            if (progress > (p + 10)) {
+                p = progress - (progress % 10);
+
+                ChatManager.messageQueue.add(p + "%");
+            }
+
             XSSFSheet spreadsheet = workbook.createSheet(history.byOrder ? ("Tick" + selection.tracker.spawnTick + " OOE" + selection.order) : Integer.toString(selection.id));
             XSSFRow startRow = spreadsheet.createRow(0);
 
@@ -116,7 +154,7 @@ public class ExcelManager {
             }
 
             XSSFDrawing drawing = spreadsheet.createDrawingPatriarch();
-            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 11, 0, 31, 40);
+            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 11, 0, 27, 20);
             XSSFChart chart = drawing.createChart(anchor);
 
             chart.setTitleText("Entity Velocity");
@@ -171,7 +209,17 @@ public class ExcelManager {
             ).setTitle("Total", null);
             chart.plot(data);
             formulaEvaluator.clearAllCachedResultValues();
+
+            if (history.byOrder)
+                ExcelManager.addOrderedLinks(history, spreadsheet, hyperLinks);
+            else
+                ExcelManager.addLinks(history, spreadsheet, hyperLinks);
+
+            s += 1;
         }
+
+        ChatManager.messageQueue.add("Finished conversion... 100%");
+        ChatManager.messageQueue.add("Writing to file...");
 
         try {
             File excelFile = new File(ExcelManager.excelFolder, "history" + UUID.randomUUID().toString().replace("-", "") + ".xlsx");
@@ -179,9 +227,95 @@ public class ExcelManager {
 
             workbook.write(fileOut);
             fileOut.close();
+
+            ChatManager.messageQueue.add("Done. Opening file.");
             Desktop.getDesktop().open(excelFile);
         } catch (IOException e) {
+            ChatManager.messageQueue.add("Failed to write to file!");
+
             e.printStackTrace();
+        }
+    }
+
+    private static XSSFRow getOrCreateRow(XSSFSheet spreadsheet, int r) {
+        XSSFRow row = spreadsheet.getRow(r);
+
+        return (row != null) ? row : spreadsheet.createRow(r);
+    }
+
+    private static void addOrderedLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks) {
+        int cStart = 12;
+        int r = 21, c = cStart;
+        int colSpan = 15;
+        int size = history.selections.size();
+        long currentTick = history.selections.get(0).tracker.spawnTick;
+
+        XSSFRow row = ExcelManager.getOrCreateRow(spreadsheet, r);
+        XSSFCell tickCell = row.createCell(c);
+
+        tickCell.setCellValue("TICK " + currentTick);
+
+        r++;
+        row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+        for (int i = 0; i < size; i++) {
+            CDBlockSelection refSelection = history.selections.get(i);
+
+            if (refSelection.tracker.spawnTick != currentTick) {
+                currentTick = refSelection.tracker.spawnTick;
+                c = cStart;
+                r++;
+                row = ExcelManager.getOrCreateRow(spreadsheet, r);
+                tickCell = row.createCell(c);
+
+                tickCell.setCellValue("Tick " + currentTick);
+
+                r++;
+                row = ExcelManager.getOrCreateRow(spreadsheet, r);
+            } else if (c == (cStart + colSpan)) {
+                c = cStart;
+                r++;
+                row = ExcelManager.getOrCreateRow(spreadsheet, r);
+            }
+
+            XSSFCell refCell = row.createCell(c);
+            Pair<String, Hyperlink> ref = hyperLinks.get(i);
+
+            refCell.setCellValue(ref.getLeft());
+            refCell.setHyperlink(ref.getRight());
+
+            c++;
+        }
+    }
+
+    private static void addLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks) {
+        int cStart = 12;
+        int r = 21, c = cStart;
+        int colSpan = 15;
+        int size = history.selections.size();
+
+        XSSFRow row = ExcelManager.getOrCreateRow(spreadsheet, r);
+        XSSFCell tickCell = row.createCell(c);
+
+        tickCell.setCellValue("Tip: '/c e ooe' will order tracked entities by OOE");
+
+        r++;
+        row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+        for (int i = 0; i < size; i++) {
+            if (c == (cStart + colSpan)) {
+                c = cStart;
+                r++;
+                row = ExcelManager.getOrCreateRow(spreadsheet, r);
+            }
+
+            XSSFCell refCell = row.createCell(c);
+            Pair<String, Hyperlink> ref = hyperLinks.get(i);
+
+            refCell.setCellValue(ref.getLeft());
+            refCell.setHyperlink(ref.getRight());
+
+            c++;
         }
     }
 
