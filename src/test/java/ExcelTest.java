@@ -11,9 +11,10 @@ public class ExcelTest {
     @Test
     public void testExcelGeneration() throws IOException {
         FileInputStream fis = new FileInputStream("src/test/resources/testhistory.cdhistory");
-        CDHistory history = CDHistory.fromBytes(new DataInputStream(fis));
+        DataInputStream dis = new DataInputStream(fis);
+        CDHistory history = CDHistory.fromBytes(dis);
 
-        fis.close();
+        dis.close();
         ExcelManager.viewAsExcel(history);
     }
 
