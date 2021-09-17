@@ -107,42 +107,13 @@ public class ExcelManager {
 
             startRow.createCell(0).setCellValue("Tick");
             startRow.createCell(1).setCellValue("Entity Type");
-
-            XSSFCell xTitleCell = startRow.createCell(2);
-
-            xTitleCell.setCellValue("X");
-            xTitleCell.setCellStyle(xStyle);
-
-            XSSFCell yTitleCell = startRow.createCell(3);
-
-            yTitleCell.setCellValue("Y");
-            yTitleCell.setCellStyle(yStyle);
-
-            XSSFCell zTitleCell = startRow.createCell(4);
-
-            zTitleCell.setCellValue("Z");
-            zTitleCell.setCellStyle(zStyle);
-
-            XSSFCell xVelTitleCell = startRow.createCell(5);
-
-            xVelTitleCell.setCellValue("X Velocity");
-            xVelTitleCell.setCellStyle(xStyle);
-
-            XSSFCell yVelTitleCell = startRow.createCell(6);
-
-            yVelTitleCell.setCellValue("Y Velocity");
-            yVelTitleCell.setCellStyle(yStyle);
-
-            XSSFCell zVelTitleCell = startRow.createCell(7);
-
-            zVelTitleCell.setCellValue("Z Velocity");
-            zVelTitleCell.setCellStyle(zStyle);
-
-            XSSFCell totalVelTitleCell = startRow.createCell(8);
-
-            totalVelTitleCell.setCellValue("Total Velocity");
-            totalVelTitleCell.setCellStyle(totalStyle);
-
+            ExcelManager.createStyledCell(startRow, 2, "X", xStyle);
+            ExcelManager.createStyledCell(startRow, 3, "Y", yStyle);
+            ExcelManager.createStyledCell(startRow, 4, "Z", zStyle);
+            ExcelManager.createStyledCell(startRow, 5, "X Velocity", xStyle);
+            ExcelManager.createStyledCell(startRow, 6, "Y Velocity", yStyle);
+            ExcelManager.createStyledCell(startRow, 7, "Z Velocity", zStyle);
+            ExcelManager.createStyledCell(startRow, 8, "Total Velocity", totalStyle);
             startRow.createCell(9).setCellValue("XZ 1x1");
             startRow.createCell(10).setCellValue("Y 1x1");
 
@@ -184,61 +155,7 @@ public class ExcelManager {
                 row.createCell(10).setCellValue(y1x1);
             }
 
-            XSSFDrawing drawing = spreadsheet.createDrawingPatriarch();
-            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 11, 0, 27, 20);
-            XSSFChart chart = drawing.createChart(anchor);
-
-            chart.setTitleText("Entity Velocity");
-
-            XDDFChartLegend legend = chart.getOrAddLegend();
-            XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
-
-            bottomAxis.setTitle("Tick");
-
-            XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
-
-            leftAxis.setTitle("Velocity");
-
-            XDDFCategoryDataSource categoryDataSource = XDDFDataSourcesFactory.fromStringCellRange(
-                spreadsheet,
-                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 0, 0)
-            );
-            XDDFNumericalDataSource<Double> xDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
-                spreadsheet,
-                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 5, 5)
-            );
-            XDDFNumericalDataSource<Double> yDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
-                spreadsheet,
-                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 6, 6)
-            );
-            XDDFNumericalDataSource<Double> zDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
-                spreadsheet,
-                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 7, 7)
-            );
-            XDDFNumericalDataSource<Double> totalDataSource = XDDFDataSourcesFactory.fromNumericCellRange(
-                spreadsheet,
-                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 8, 8)
-            );
-            XDDFChartData data = chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
-
-            legend.setPosition(LegendPosition.BOTTOM);
-            data.addSeries(
-                categoryDataSource,
-                xDataSource
-            ).setTitle("X", null);
-            data.addSeries(
-                categoryDataSource,
-                yDataSource
-            ).setTitle("Y", null);
-            data.addSeries(
-                categoryDataSource,
-                zDataSource
-            ).setTitle("Z", null);
-            data.addSeries(
-                categoryDataSource,
-                totalDataSource
-            ).setTitle("Total", null);
-            chart.plot(data);
+            ExcelManager.createGraph(spreadsheet, selection);
             formulaEvaluator.clearAllCachedResultValues();
 
             if (history.byOrder)
@@ -264,6 +181,60 @@ public class ExcelManager {
 
             e.printStackTrace();
         }
+    }
+
+    private static void createGraph(XSSFSheet spreadsheet, CDBlockSelection selection) {
+        XSSFDrawing drawing = spreadsheet.createDrawingPatriarch();
+        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 11, 0, 27, 20);
+        XSSFChart chart = drawing.createChart(anchor);
+
+        chart.setTitleText("Entity Velocity");
+
+        XDDFChartLegend legend = chart.getOrAddLegend();
+        XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
+
+        bottomAxis.setTitle("Tick");
+
+        XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
+
+        leftAxis.setTitle("Velocity");
+
+        XDDFCategoryDataSource tickDataSource = XDDFDataSourcesFactory.fromStringCellRange(
+            spreadsheet,
+            new CellRangeAddress(1, selection.tracker.locationHistory.size(), 0, 0)
+        );
+        XDDFChartData data = chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
+
+        legend.setPosition(LegendPosition.BOTTOM);
+        data.addSeries(
+            tickDataSource,
+            XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 5, 5)
+            )
+        ).setTitle("X", null);
+        data.addSeries(
+            tickDataSource,
+            XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 6, 6)
+            )
+        ).setTitle("Y", null);
+        data.addSeries(
+            tickDataSource,
+            XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 7, 7)
+            )
+        ).setTitle("Z", null);
+        data.addSeries(
+            tickDataSource,
+            XDDFDataSourcesFactory.fromNumericCellRange(
+                spreadsheet,
+                new CellRangeAddress(1, selection.tracker.locationHistory.size(), 8, 8)
+            )
+        ).setTitle("Total", null);
+        chart.plot(data);
     }
 
     private static String getStringFromEntityType(CDEntityType entityType) {
