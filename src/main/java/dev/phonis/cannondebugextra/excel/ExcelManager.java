@@ -6,8 +6,7 @@ import dev.phonis.cannondebugextra.util.ImmutablePair;
 import dev.phonis.cannondebugextra.util.NumberUtils;
 import dev.phonis.cannondebugextra.util.Pair;
 import org.apache.poi.common.usermodel.HyperlinkType;
-import org.apache.poi.ss.usermodel.CreationHelper;
-import org.apache.poi.ss.usermodel.Hyperlink;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.usermodel.*;
@@ -49,7 +48,7 @@ public class ExcelManager {
         }
     }
 
-    private static void viewAsExcel(CDHistory history) {
+    public static void viewAsExcel(CDHistory history) {
         if (history.selections.size() == 0) {
             ChatManager.messageQueue.add("Cannot open spreadsheet! empty cannondebug history.");
 
@@ -59,6 +58,21 @@ public class ExcelManager {
         XSSFWorkbook workbook = new XSSFWorkbook();
         XSSFFormulaEvaluator formulaEvaluator = new XSSFFormulaEvaluator(workbook);
         CreationHelper createHelper = workbook.getCreationHelper();
+        CellStyle xStyle = workbook.createCellStyle();
+        CellStyle yStyle = workbook.createCellStyle();
+        CellStyle zStyle = workbook.createCellStyle();
+        CellStyle totalStyle = workbook.createCellStyle();
+        BorderStyle borderStyle = BorderStyle.THIN;
+        short xColor = IndexedColors.PALE_BLUE.getIndex();
+        short yColor = IndexedColors.LIGHT_ORANGE.getIndex();
+        short zColor = IndexedColors.GREY_40_PERCENT.getIndex();
+        short totalColor = IndexedColors.LEMON_CHIFFON.getIndex();
+        short borderColor = IndexedColors.BLACK.getIndex();
+
+        ExcelManager.setStyle(xStyle, borderStyle, xColor, borderColor);
+        ExcelManager.setStyle(yStyle, borderStyle, yColor, borderColor);
+        ExcelManager.setStyle(zStyle, borderStyle, zColor, borderColor);
+        ExcelManager.setStyle(totalStyle, borderStyle, totalColor, borderColor);
 
         if (history.byOrder) history.selections.sort(Comparator.comparingLong((CDBlockSelection o) -> o.tracker.spawnTick).thenComparingInt(blockSelection -> blockSelection.order));
 
@@ -93,13 +107,42 @@ public class ExcelManager {
 
             startRow.createCell(0).setCellValue("Tick");
             startRow.createCell(1).setCellValue("Entity Type");
-            startRow.createCell(2).setCellValue("X");
-            startRow.createCell(3).setCellValue("Y");
-            startRow.createCell(4).setCellValue("Z");
-            startRow.createCell(5).setCellValue("X Velocity");
-            startRow.createCell(6).setCellValue("Y Velocity");
-            startRow.createCell(7).setCellValue("Z Velocity");
-            startRow.createCell(8).setCellValue("Total Velocity");
+
+            XSSFCell xTitleCell = startRow.createCell(2);
+
+            xTitleCell.setCellValue("X");
+            xTitleCell.setCellStyle(xStyle);
+
+            XSSFCell yTitleCell = startRow.createCell(3);
+
+            yTitleCell.setCellValue("Y");
+            yTitleCell.setCellStyle(yStyle);
+
+            XSSFCell zTitleCell = startRow.createCell(4);
+
+            zTitleCell.setCellValue("Z");
+            zTitleCell.setCellStyle(zStyle);
+
+            XSSFCell xVelTitleCell = startRow.createCell(5);
+
+            xVelTitleCell.setCellValue("X Velocity");
+            xVelTitleCell.setCellStyle(xStyle);
+
+            XSSFCell yVelTitleCell = startRow.createCell(6);
+
+            yVelTitleCell.setCellValue("Y Velocity");
+            yVelTitleCell.setCellStyle(yStyle);
+
+            XSSFCell zVelTitleCell = startRow.createCell(7);
+
+            zVelTitleCell.setCellValue("Z Velocity");
+            zVelTitleCell.setCellStyle(zStyle);
+
+            XSSFCell totalVelTitleCell = startRow.createCell(8);
+
+            totalVelTitleCell.setCellValue("Total Velocity");
+            totalVelTitleCell.setCellStyle(totalStyle);
+
             startRow.createCell(9).setCellValue("XZ 1x1");
             startRow.createCell(10).setCellValue("Y 1x1");
 
@@ -138,17 +181,41 @@ public class ExcelManager {
 
                 row.createCell(0).setCellValue(selection.tracker.spawnTick + (i - 1));
                 row.createCell(1).setCellValue(typeString);
-                row.createCell(2).setCellValue(location.x);
-                row.createCell(3).setCellValue(location.y);
-                row.createCell(4).setCellValue(location.z);
-                row.createCell(5).setCellValue(velocity.x);
-                row.createCell(6).setCellValue(velocity.y);
-                row.createCell(7).setCellValue(velocity.z);
+                XSSFCell xCell = row.createCell(2);
 
-                XSSFCell formulaCell = row.createCell(8);
+                xCell.setCellValue(location.x);
+                xCell.setCellStyle(xStyle);
 
-                formulaCell.setCellFormula("SQRT(POWER(F" + (i + 1) + ", 2)+POWER(G" + (i + 1) + ", 2)+POWER(H" + (i + 1) + ", 2))");
-                formulaEvaluator.evaluate(formulaCell);
+                XSSFCell yCell = row.createCell(3);
+
+                yCell.setCellValue(location.y);
+                yCell.setCellStyle(yStyle);
+
+                XSSFCell zCell = row.createCell(4);
+
+                zCell.setCellValue(location.z);
+                zCell.setCellStyle(zStyle);
+
+                XSSFCell xVelCell = row.createCell(5);
+
+                xVelCell.setCellValue(velocity.x);
+                xVelCell.setCellStyle(xStyle);
+
+                XSSFCell yVelCell = row.createCell(6);
+
+                yVelCell.setCellValue(velocity.y);
+                yVelCell.setCellStyle(yStyle);
+
+                XSSFCell zVelCell = row.createCell(7);
+
+                zVelCell.setCellValue(velocity.z);
+                zVelCell.setCellStyle(zStyle);
+
+                XSSFCell totalVelCell = row.createCell(8);
+
+                totalVelCell.setCellFormula("SQRT(POWER(F" + (i + 1) + ", 2)+POWER(G" + (i + 1) + ", 2)+POWER(H" + (i + 1) + ", 2))");
+                totalVelCell.setCellStyle(totalStyle);
+                formulaEvaluator.evaluate(totalVelCell);
                 row.createCell(9).setCellValue(xz1x1);
                 row.createCell(10).setCellValue(y1x1);
             }
@@ -235,6 +302,19 @@ public class ExcelManager {
 
             e.printStackTrace();
         }
+    }
+
+    private static void setStyle(CellStyle style, BorderStyle borderStyle, short color, short borderColor) {
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setFillForegroundColor(color);
+        style.setBorderLeft(borderStyle);
+        style.setBorderRight(borderStyle);
+        style.setBorderBottom(borderStyle);
+        style.setBorderTop(borderStyle);
+        style.setLeftBorderColor(borderColor);
+        style.setRightBorderColor(borderColor);
+        style.setBottomBorderColor(borderColor);
+        style.setTopBorderColor(borderColor);
     }
 
     private static XSSFRow getOrCreateRow(XSSFSheet spreadsheet, int r) {

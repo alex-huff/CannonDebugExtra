@@ -78,6 +78,7 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
+    testCompile 'org.apache.poi:poi-ooxml:4.1.2'
     shadow 'org.apache.poi:poi-ooxml:4.1.2'
 }
 
@@ -111,4 +112,4 @@ shadowJar {
 }
 
 // must shadow before reobfJar or Minecraft will be wrong
-project.tasks.reobfJar.dependsOn shadowJar
+tasks.reobfJar.dependsOn shadowJar
