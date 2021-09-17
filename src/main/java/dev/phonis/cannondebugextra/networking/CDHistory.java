@@ -29,7 +29,7 @@ public class CDHistory implements CDSerializable {
 
     public static CDHistory fromBytes(DataInputStream dis) throws IOException {
         int numBlockSelections = dis.readInt();
-        List<CDBlockSelection> selections = new ArrayList<>();
+        List<CDBlockSelection> selections = new ArrayList<>(numBlockSelections);
 
         for (int i = 0; i < numBlockSelections; i++) {
             selections.add(CDBlockSelection.fromBytes(dis));

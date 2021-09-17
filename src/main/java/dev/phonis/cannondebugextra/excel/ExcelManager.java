@@ -90,10 +90,10 @@ public class ExcelManager {
 
         ChatManager.messageQueue.add("Starting conversion... 0%");
 
-        int s = 0;
         int p = 0;
 
-        for (CDBlockSelection selection : history.selections) {
+        for (int s = 0; s < history.selections.size(); s++) {
+            CDBlockSelection selection = history.selections.get(s);
             int progress = (int) ((s / (double) history.selections.size()) * 100);
 
             if (progress > (p + 10)) {
@@ -152,22 +152,7 @@ public class ExcelManager {
                 XSSFRow row = spreadsheet.createRow(i);
                 boolean xz1x1 = false;
                 boolean y1x1 = false;
-                String typeString;
-
-                switch (selection.tracker.entityType) {
-                    case TNT:
-                        typeString = ExcelManager.TNTString;
-
-                        break;
-                    case FALLINGBLOCK:
-                        typeString = ExcelManager.fallingBlockString;
-
-                        break;
-                    default:
-                        typeString = ExcelManager.otherString;
-
-                        break;
-                }
+                String typeString = ExcelManager.getStringFromEntityType(selection.tracker.entityType);
 
                 if (NumberUtils.isInsideCube(location.x) && NumberUtils.isInsideCube(location.z) ||
                     Math.abs(velocity.x) != 0.0 && NumberUtils.isInsideCube(location.x) ||
@@ -181,41 +166,20 @@ public class ExcelManager {
 
                 row.createCell(0).setCellValue(selection.tracker.spawnTick + (i - 1));
                 row.createCell(1).setCellValue(typeString);
-                XSSFCell xCell = row.createCell(2);
-
-                xCell.setCellValue(location.x);
-                xCell.setCellStyle(xStyle);
-
-                XSSFCell yCell = row.createCell(3);
-
-                yCell.setCellValue(location.y);
-                yCell.setCellStyle(yStyle);
-
-                XSSFCell zCell = row.createCell(4);
-
-                zCell.setCellValue(location.z);
-                zCell.setCellStyle(zStyle);
-
-                XSSFCell xVelCell = row.createCell(5);
-
-                xVelCell.setCellValue(velocity.x);
-                xVelCell.setCellStyle(xStyle);
-
-                XSSFCell yVelCell = row.createCell(6);
-
-                yVelCell.setCellValue(velocity.y);
-                yVelCell.setCellStyle(yStyle);
-
-                XSSFCell zVelCell = row.createCell(7);
-
-                zVelCell.setCellValue(velocity.z);
-                zVelCell.setCellStyle(zStyle);
-
-                XSSFCell totalVelCell = row.createCell(8);
-
-                totalVelCell.setCellFormula("SQRT(POWER(F" + (i + 1) + ", 2)+POWER(G" + (i + 1) + ", 2)+POWER(H" + (i + 1) + ", 2))");
-                totalVelCell.setCellStyle(totalStyle);
-                formulaEvaluator.evaluate(totalVelCell);
+                ExcelManager.createStyledCell(row, 2, location.x, xStyle);
+                ExcelManager.createStyledCell(row, 3, location.y, yStyle);
+                ExcelManager.createStyledCell(row, 4, location.z, zStyle);
+                ExcelManager.createStyledCell(row, 5, velocity.x, xStyle);
+                ExcelManager.createStyledCell(row, 6, velocity.y, yStyle);
+                ExcelManager.createStyledCell(row, 7, velocity.z, zStyle);
+                formulaEvaluator.evaluate(
+                    ExcelManager.createStyledFormulaCell(
+                        row,
+                        8,
+                        "SQRT(POWER(F" + (i + 1) + ", 2)+POWER(G" + (i + 1) + ", 2)+POWER(H" + (i + 1) + ", 2))",
+                        totalStyle
+                    )
+                );
                 row.createCell(9).setCellValue(xz1x1);
                 row.createCell(10).setCellValue(y1x1);
             }
@@ -281,8 +245,6 @@ public class ExcelManager {
                 ExcelManager.addOrderedLinks(history, spreadsheet, hyperLinks);
             else
                 ExcelManager.addLinks(history, spreadsheet, hyperLinks);
-
-            s += 1;
         }
 
         ChatManager.messageQueue.add("Finished conversion... 100%");
@@ -302,6 +264,54 @@ public class ExcelManager {
 
             e.printStackTrace();
         }
+    }
+
+    private static String getStringFromEntityType(CDEntityType entityType) {
+        String typeString;
+
+        switch (entityType) {
+            case TNT:
+                typeString = ExcelManager.TNTString;
+
+                break;
+            case FALLINGBLOCK:
+                typeString = ExcelManager.fallingBlockString;
+
+                break;
+            default:
+                typeString = ExcelManager.otherString;
+
+                break;
+        }
+
+        return typeString;
+    }
+
+    private static XSSFCell createStyledFormulaCell(XSSFRow row, int index, String value, CellStyle style) {
+        XSSFCell cell = row.createCell(index);
+
+        cell.setCellFormula(value);
+        cell.setCellStyle(style);
+
+        return cell;
+    }
+
+    private static XSSFCell createStyledCell(XSSFRow row, int index, String value, CellStyle style) {
+        XSSFCell cell = row.createCell(index);
+
+        cell.setCellValue(value);
+        cell.setCellStyle(style);
+
+        return cell;
+    }
+
+    private static XSSFCell createStyledCell(XSSFRow row, int index, Double value, CellStyle style) {
+        XSSFCell cell = row.createCell(index);
+
+        cell.setCellValue(value);
+        cell.setCellStyle(style);
+
+        return cell;
     }
 
     private static void setStyle(CellStyle style, BorderStyle borderStyle, short color, short borderColor) {
