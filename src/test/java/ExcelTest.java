@@ -13,6 +13,7 @@ public class ExcelTest {
         FileInputStream fis = new FileInputStream("src/test/resources/testhistory.cdhistory");
         CDHistory history = CDHistory.fromBytes(new DataInputStream(fis));
 
+        fis.close();
         ExcelManager.viewAsExcel(history);
     }
 
