@@ -3,9 +3,7 @@ package dev.phonis.cannondebugextra.excel;
 import dev.phonis.cannondebugextra.CannonDebugExtra;
 import dev.phonis.cannondebugextra.event.ChatManager;
 import dev.phonis.cannondebugextra.networking.*;
-import dev.phonis.cannondebugextra.util.ImmutablePair;
-import dev.phonis.cannondebugextra.util.NumberUtils;
-import dev.phonis.cannondebugextra.util.Pair;
+import dev.phonis.cannondebugextra.util.*;
 import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Font;
@@ -104,7 +102,18 @@ public class ExcelManager {
         ExcelManager.setStyle(linkStyle, borderStyle, linkColor, borderColor);
         linkStyle.setFont(underlineFont);
 
-        if (history.byOrder) history.selections.sort(Comparator.comparingLong((CDBlockSelection o) -> o.tracker.spawnTick).thenComparingInt(blockSelection -> blockSelection.order));
+        int maxLinksPerSection;
+
+        if (history.byOrder) {
+            OccurrenceMap<Long> perTickOccurrences = new TreeOccurrenceMap<>();
+
+            history.selections.sort(Comparator.comparingLong((CDBlockSelection o) -> o.tracker.spawnTick).thenComparingInt(blockSelection -> blockSelection.order));
+            history.selections.stream().map(blockSelection -> blockSelection.tracker.spawnTick).forEach(perTickOccurrences::increment);
+
+            maxLinksPerSection = perTickOccurrences.getMax().getRight();
+        } else {
+            maxLinksPerSection = history.selections.size();
+        }
 
         List<Pair<String, Hyperlink>> hyperLinks = history.selections.parallelStream().map(
             selection -> {
@@ -189,9 +198,9 @@ public class ExcelManager {
             formulaEvaluator.clearAllCachedResultValues();
 
             if (history.byOrder)
-                ExcelManager.addOrderedLinks(history, spreadsheet, hyperLinks, linkStyle, linkTickStyle, linkBorderStyle);
+                ExcelManager.addOrderedLinks(history, maxLinksPerSection, spreadsheet, hyperLinks, linkStyle, linkTickStyle, linkBorderStyle);
             else
-                ExcelManager.addLinks(history, spreadsheet, hyperLinks, linkStyle, linkBorderStyle);
+                ExcelManager.addLinks(history, maxLinksPerSection, spreadsheet, hyperLinks, linkStyle, linkBorderStyle);
         }
 
         ExcelManager.logToPlayer("Finished conversion... 100%");
@@ -377,10 +386,10 @@ public class ExcelManager {
         return cell;
     }
 
-    private static void addOrderedLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks, CellStyle linkStyle, CellStyle tickStyle, CellStyle linkBorderStyle) {
+    private static void addOrderedLinks(CDHistory history, int maxLinksPerSection, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks, CellStyle linkStyle, CellStyle tickStyle, CellStyle linkBorderStyle) {
+        final int colSpan = Math.min(maxLinksPerSection, 15);
         final int cStart = 12;
         int r = 20, c = cStart;
-        final int colSpan = 15;
         final int size = history.selections.size();
         long currentTick = history.selections.get(0).tracker.spawnTick;
 
@@ -433,17 +442,18 @@ public class ExcelManager {
         ExcelManager.fillLinkBorderSpan(row, cStart - 1, colSpan + 2, linkBorderStyle);
     }
 
-    private static void addLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks, CellStyle linkStyle, CellStyle linkBorderStyle) {
+    private static void addLinks(CDHistory history, int maxLinksPerSection, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks, CellStyle linkStyle, CellStyle linkBorderStyle) {
+        final int colSpan = Math.min(maxLinksPerSection, 15);
         final int cStart = 12;
         int r = 20, c = cStart;
-        final int colSpan = 15;
         final int size = history.selections.size();
 
+        ExcelManager.getOrCreateRow(spreadsheet, r).createCell(cStart).setCellValue("Tip: '/c e ooe' will order tracked entities by OOE");
+
+        r++;
         XSSFRow row = ExcelManager.getOrCreateRow(spreadsheet, r);
 
-        ExcelManager.fillLinkBorderSpan(row, cStart - 1, 1, linkBorderStyle);
-        ExcelManager.createStyledCell(row, cStart, "Tip: '/c e ooe' will order tracked entities by OOE", linkBorderStyle);
-        ExcelManager.fillLinkBorderSpan(row, cStart + 1, colSpan, linkBorderStyle);
+        ExcelManager.fillLinkBorderSpan(row, cStart - 1, colSpan + 2, linkBorderStyle);
 
         r++;
         row = ExcelManager.getOrCreateRow(spreadsheet, r);
