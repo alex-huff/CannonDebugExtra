@@ -16,12 +16,11 @@ import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 
 public class ExcelManager {
 
@@ -51,6 +50,7 @@ public class ExcelManager {
 
     private static void logToPlayer(String message) {
         ChatManager.messageQueue.add(CannonDebugExtra.prefix + message);
+        System.out.println(message);
     }
 
     public static void viewAsExcel(CDHistory history) {
@@ -81,17 +81,17 @@ public class ExcelManager {
 
         if (history.byOrder) history.selections.sort(Comparator.comparingLong((CDBlockSelection o) -> o.tracker.spawnTick).thenComparingInt(blockSelection -> blockSelection.order));
 
-        List<Pair<String, Hyperlink>> hyperLinks = new ArrayList<>(history.selections.size());
+        List<Pair<String, Hyperlink>> hyperLinks = history.selections.parallelStream().map(
+            selection -> {
+                Hyperlink hyperlink = createHelper.createHyperlink(HyperlinkType.DOCUMENT);
+                String refLink =  history.byOrder ? ("Tick" + selection.tracker.spawnTick + " OOE" + selection.order) : Integer.toString(selection.id);
+                String refName = history.byOrder ? ("OOE" + selection.order) : ("ID" + selection.id);
 
-        for (int h = 0; h < history.selections.size(); h++) {
-            CDBlockSelection selection = history.selections.get(h);
-            Hyperlink hyperlink = createHelper.createHyperlink(HyperlinkType.DOCUMENT);
-            String refLink =  history.byOrder ? ("Tick" + selection.tracker.spawnTick + " OOE" + selection.order) : Integer.toString(selection.id);
-            String refName = history.byOrder ? ("OOE" + selection.order) : ("ID" + selection.id);
+                hyperlink.setAddress("'" + refLink + "'!A1");
 
-            hyperlink.setAddress("'" + refLink + "'!A1");
-            hyperLinks.add(new ImmutablePair<>(refName, hyperlink));
-        }
+                return new ImmutablePair<>(refName, hyperlink);
+            }
+        ).collect(Collectors.toList());
 
         ExcelManager.logToPlayer("Starting conversion... 0%");
 
@@ -171,7 +171,10 @@ public class ExcelManager {
 
         ExcelManager.logToPlayer("Finished conversion... 100%");
         ExcelManager.logToPlayer("Writing to file...");
+        ExcelManager.writeToFile(workbook);
+    }
 
+    private static void writeToFile(XSSFWorkbook workbook) {
         try {
             File excelFile = new File(ExcelManager.excelFolder, "history" + UUID.randomUUID().toString().replace("-", "") + ".xlsx");
             FileOutputStream fileOut = new FileOutputStream(excelFile);
