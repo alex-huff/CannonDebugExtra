@@ -8,6 +8,7 @@ import dev.phonis.cannondebugextra.util.NumberUtils;
 import dev.phonis.cannondebugextra.util.Pair;
 import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.usermodel.*;
@@ -67,17 +68,41 @@ public class ExcelManager {
         CellStyle yStyle = workbook.createCellStyle();
         CellStyle zStyle = workbook.createCellStyle();
         CellStyle totalStyle = workbook.createCellStyle();
+        CellStyle trueStyle = workbook.createCellStyle();
+        CellStyle falseStyle = workbook.createCellStyle();
+        CellStyle booleanStyle = workbook.createCellStyle();
+        CellStyle tickStyle = workbook.createCellStyle();
+        CellStyle linkTickStyle = workbook.createCellStyle();
+        CellStyle linkBorderStyle = workbook.createCellStyle();
+        CellStyle linkStyle = workbook.createCellStyle();
         BorderStyle borderStyle = BorderStyle.THIN;
         short xColor = IndexedColors.PALE_BLUE.getIndex();
         short yColor = IndexedColors.LIGHT_ORANGE.getIndex();
-        short zColor = IndexedColors.GREY_40_PERCENT.getIndex();
+        short zColor = IndexedColors.GREY_25_PERCENT.getIndex();
         short totalColor = IndexedColors.LEMON_CHIFFON.getIndex();
         short borderColor = IndexedColors.BLACK.getIndex();
+        short trueColor = IndexedColors.LIGHT_GREEN.getIndex();
+        short falseColor = IndexedColors.CORAL.getIndex();
+        short booleanColor = IndexedColors.GREY_40_PERCENT.getIndex();
+        short tickColor = IndexedColors.ROSE.getIndex();
+        short linkBorderColor = IndexedColors.GREY_80_PERCENT.getIndex();
+        short linkColor = IndexedColors.GREY_25_PERCENT.getIndex();
+        Font underlineFont = workbook.createFont();
 
+        underlineFont.setUnderline(XSSFFont.U_SINGLE);
+        underlineFont.setColor(IndexedColors.BLUE.getIndex());
         ExcelManager.setStyle(xStyle, borderStyle, xColor, borderColor);
         ExcelManager.setStyle(yStyle, borderStyle, yColor, borderColor);
         ExcelManager.setStyle(zStyle, borderStyle, zColor, borderColor);
         ExcelManager.setStyle(totalStyle, borderStyle, totalColor, borderColor);
+        ExcelManager.setStyle(trueStyle, borderStyle, trueColor, borderColor);
+        ExcelManager.setStyle(falseStyle, borderStyle, falseColor, borderColor);
+        ExcelManager.setStyle(booleanStyle, borderStyle, booleanColor, borderColor);
+        ExcelManager.setStyle(tickStyle, borderStyle, tickColor, borderColor);
+        ExcelManager.setStyle(linkTickStyle, BorderStyle.NONE, tickColor, borderColor);
+        ExcelManager.setStyle(linkBorderStyle, BorderStyle.NONE, linkBorderColor, borderColor);
+        ExcelManager.setStyle(linkStyle, borderStyle, linkColor, borderColor);
+        linkStyle.setFont(underlineFont);
 
         if (history.byOrder) history.selections.sort(Comparator.comparingLong((CDBlockSelection o) -> o.tracker.spawnTick).thenComparingInt(blockSelection -> blockSelection.order));
 
@@ -110,8 +135,8 @@ public class ExcelManager {
             XSSFSheet spreadsheet = workbook.createSheet(history.byOrder ? ("Tick" + selection.tracker.spawnTick + " OOE" + selection.order) : Integer.toString(selection.id));
             XSSFRow startRow = spreadsheet.createRow(0);
 
-            startRow.createCell(0).setCellValue("Tick");
-            startRow.createCell(1).setCellValue("Entity Type");
+            startRow.createCell(0).setCellValue("Entity Type");
+            ExcelManager.createStyledCell(startRow, 1, "Tick", tickStyle);
             ExcelManager.createStyledCell(startRow, 2, "X", xStyle);
             ExcelManager.createStyledCell(startRow, 3, "Y", yStyle);
             ExcelManager.createStyledCell(startRow, 4, "Z", zStyle);
@@ -119,8 +144,8 @@ public class ExcelManager {
             ExcelManager.createStyledCell(startRow, 6, "Y Velocity", yStyle);
             ExcelManager.createStyledCell(startRow, 7, "Z Velocity", zStyle);
             ExcelManager.createStyledCell(startRow, 8, "Total Velocity", totalStyle);
-            startRow.createCell(9).setCellValue("XZ 1x1");
-            startRow.createCell(10).setCellValue("Y 1x1");
+            ExcelManager.createStyledCell(startRow, 9, "XZ 1x1", booleanStyle);
+            ExcelManager.createStyledCell(startRow, 10, "Y 1x1", booleanStyle);
 
             for (int i = 1; i < selection.tracker.locationHistory.size() + 1; i++) {
                 CDLocation location = selection.tracker.locationHistory.get(i - 1);
@@ -140,8 +165,8 @@ public class ExcelManager {
                     y1x1 = true;
                 }
 
-                row.createCell(0).setCellValue(selection.tracker.spawnTick + (i - 1));
-                row.createCell(1).setCellValue(typeString);
+                if (i == 1) row.createCell(0).setCellValue(typeString);
+                ExcelManager.createStyledCell(row, 1, selection.tracker.spawnTick + (i - 1), tickStyle);
                 ExcelManager.createStyledCell(row, 2, location.x, xStyle);
                 ExcelManager.createStyledCell(row, 3, location.y, yStyle);
                 ExcelManager.createStyledCell(row, 4, location.z, zStyle);
@@ -156,17 +181,17 @@ public class ExcelManager {
                         totalStyle
                     )
                 );
-                row.createCell(9).setCellValue(xz1x1);
-                row.createCell(10).setCellValue(y1x1);
+                ExcelManager.createStyledCell(row, 9, xz1x1, xz1x1 ? trueStyle : falseStyle);
+                ExcelManager.createStyledCell(row, 10, y1x1, y1x1 ? trueStyle : falseStyle);
             }
 
             ExcelManager.createGraph(spreadsheet, selection);
             formulaEvaluator.clearAllCachedResultValues();
 
             if (history.byOrder)
-                ExcelManager.addOrderedLinks(history, spreadsheet, hyperLinks);
+                ExcelManager.addOrderedLinks(history, spreadsheet, hyperLinks, linkStyle, linkTickStyle, linkBorderStyle);
             else
-                ExcelManager.addLinks(history, spreadsheet, hyperLinks);
+                ExcelManager.addLinks(history, spreadsheet, hyperLinks, linkStyle, linkBorderStyle);
         }
 
         ExcelManager.logToPlayer("Finished conversion... 100%");
@@ -193,7 +218,7 @@ public class ExcelManager {
 
     private static void createGraph(XSSFSheet spreadsheet, CDBlockSelection selection) {
         XSSFDrawing drawing = spreadsheet.createDrawingPatriarch();
-        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 11, 0, 27, 20);
+        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 11, 0, 28, 20);
         XSSFChart chart = drawing.createChart(anchor);
 
         chart.setTitleText("Entity Velocity");
@@ -209,7 +234,7 @@ public class ExcelManager {
 
         XDDFCategoryDataSource tickDataSource = XDDFDataSourcesFactory.fromStringCellRange(
             spreadsheet,
-            new CellRangeAddress(1, selection.tracker.locationHistory.size(), 0, 0)
+            new CellRangeAddress(1, selection.tracker.locationHistory.size(), 1, 1)
         );
         XDDFChartData data = chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
 
@@ -275,6 +300,32 @@ public class ExcelManager {
         return cell;
     }
 
+    private static XSSFCell createStyledCell(XSSFRow row, int index, CellStyle style) {
+        XSSFCell cell = row.createCell(index);
+
+        cell.setCellStyle(style);
+
+        return cell;
+    }
+
+    private static XSSFCell createStyledCell(XSSFRow row, int index, long value, CellStyle style) {
+        XSSFCell cell = row.createCell(index);
+
+        cell.setCellValue(value);
+        cell.setCellStyle(style);
+
+        return cell;
+    }
+
+    private static XSSFCell createStyledCell(XSSFRow row, int index, Boolean value, CellStyle style) {
+        XSSFCell cell = row.createCell(index);
+
+        cell.setCellValue(value);
+        cell.setCellStyle(style);
+
+        return cell;
+    }
+
     private static XSSFCell createStyledCell(XSSFRow row, int index, String value, CellStyle style) {
         XSSFCell cell = row.createCell(index);
 
@@ -312,79 +363,132 @@ public class ExcelManager {
         return (row != null) ? row : spreadsheet.createRow(r);
     }
 
-    private static void addOrderedLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks) {
-        int cStart = 12;
-        int r = 21, c = cStart;
-        int colSpan = 15;
-        int size = history.selections.size();
+    private static XSSFCell createLinkCell(XSSFRow row, int index, Pair<String, Hyperlink> linkRef, CellStyle linkStyle) {
+        return ExcelManager.createLinkCell(row, index, linkRef.getLeft(), linkRef.getRight(), linkStyle);
+    }
+
+    private static XSSFCell createLinkCell(XSSFRow row, int index, String name, Hyperlink link, CellStyle linkStyle) {
+        XSSFCell cell = row.createCell(index);
+
+        cell.setCellStyle(linkStyle);
+        cell.setCellValue(name);
+        cell.setHyperlink(link);
+
+        return cell;
+    }
+
+    private static void addOrderedLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks, CellStyle linkStyle, CellStyle tickStyle, CellStyle linkBorderStyle) {
+        final int cStart = 12;
+        int r = 20, c = cStart;
+        final int colSpan = 15;
+        final int size = history.selections.size();
         long currentTick = history.selections.get(0).tracker.spawnTick;
 
         XSSFRow row = ExcelManager.getOrCreateRow(spreadsheet, r);
-        XSSFCell tickCell = row.createCell(c);
 
-        tickCell.setCellValue("TICK " + currentTick);
+        ExcelManager.fillOrderedLinkSpacer(row, cStart, colSpan, currentTick, tickStyle, linkBorderStyle);
 
         r++;
         row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+        ExcelManager.createStyledCell(row, cStart - 1, linkBorderStyle);
 
         for (int i = 0; i < size; i++) {
             CDBlockSelection refSelection = history.selections.get(i);
 
             if (refSelection.tracker.spawnTick != currentTick) {
+                ExcelManager.fillLinkBorderRange(row, c, cStart + colSpan + 1, linkBorderStyle);
+
                 currentTick = refSelection.tracker.spawnTick;
                 c = cStart;
                 r++;
                 row = ExcelManager.getOrCreateRow(spreadsheet, r);
-                tickCell = row.createCell(c);
 
-                tickCell.setCellValue("Tick " + currentTick);
+                ExcelManager.fillOrderedLinkSpacer(row, cStart, colSpan, currentTick, tickStyle, linkBorderStyle);
 
                 r++;
                 row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+                ExcelManager.createStyledCell(row, cStart - 1, linkBorderStyle);
             } else if (c == (cStart + colSpan)) {
+                ExcelManager.createStyledCell(row, c, linkBorderStyle);
+
                 c = cStart;
                 r++;
                 row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+                ExcelManager.createStyledCell(row, cStart - 1, linkBorderStyle);
             }
 
-            XSSFCell refCell = row.createCell(c);
-            Pair<String, Hyperlink> ref = hyperLinks.get(i);
-
-            refCell.setCellValue(ref.getLeft());
-            refCell.setHyperlink(ref.getRight());
+            ExcelManager.createLinkCell(row, c, hyperLinks.get(i), linkStyle);
 
             c++;
         }
-    }
 
-    private static void addLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks) {
-        int cStart = 12;
-        int r = 21, c = cStart;
-        int colSpan = 15;
-        int size = history.selections.size();
-
-        XSSFRow row = ExcelManager.getOrCreateRow(spreadsheet, r);
-        XSSFCell tickCell = row.createCell(c);
-
-        tickCell.setCellValue("Tip: '/c e ooe' will order tracked entities by OOE");
+        ExcelManager.fillLinkBorderRange(row, c, cStart + colSpan + 1, linkBorderStyle);
 
         r++;
         row = ExcelManager.getOrCreateRow(spreadsheet, r);
 
+        ExcelManager.fillLinkBorderSpan(row, cStart - 1, colSpan + 2, linkBorderStyle);
+    }
+
+    private static void addLinks(CDHistory history, XSSFSheet spreadsheet, List<Pair<String, Hyperlink>> hyperLinks, CellStyle linkStyle, CellStyle linkBorderStyle) {
+        final int cStart = 12;
+        int r = 20, c = cStart;
+        final int colSpan = 15;
+        final int size = history.selections.size();
+
+        XSSFRow row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+        ExcelManager.fillLinkBorderSpan(row, cStart - 1, 1, linkBorderStyle);
+        ExcelManager.createStyledCell(row, cStart, "Tip: '/c e ooe' will order tracked entities by OOE", linkBorderStyle);
+        ExcelManager.fillLinkBorderSpan(row, cStart + 1, colSpan, linkBorderStyle);
+
+        r++;
+        row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+        ExcelManager.createStyledCell(row, cStart - 1, linkBorderStyle);
+
         for (int i = 0; i < size; i++) {
             if (c == (cStart + colSpan)) {
+                ExcelManager.createStyledCell(row, c, linkBorderStyle);
+
                 c = cStart;
                 r++;
                 row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+                ExcelManager.createStyledCell(row, cStart - 1, linkBorderStyle);
             }
 
-            XSSFCell refCell = row.createCell(c);
-            Pair<String, Hyperlink> ref = hyperLinks.get(i);
-
-            refCell.setCellValue(ref.getLeft());
-            refCell.setHyperlink(ref.getRight());
+            ExcelManager.createLinkCell(row, c, hyperLinks.get(i), linkStyle);
 
             c++;
+        }
+
+        ExcelManager.fillLinkBorderRange(row, c, cStart + colSpan + 1, linkBorderStyle);
+
+        r++;
+        row = ExcelManager.getOrCreateRow(spreadsheet, r);
+
+        ExcelManager.fillLinkBorderSpan(row, cStart - 1, colSpan + 2, linkBorderStyle);
+    }
+
+    private static void fillOrderedLinkSpacer(XSSFRow row, int cStart, int colSpan, long currentTick, CellStyle tickStyle, CellStyle linkBorderStyle) {
+        ExcelManager.fillLinkBorderSpan(row, cStart - 1, 1, linkBorderStyle);
+        ExcelManager.createStyledCell(row, cStart, "Tick " + currentTick, tickStyle);
+        ExcelManager.fillLinkBorderSpan(row, cStart + 1, colSpan, linkBorderStyle);
+    }
+
+    private static void fillLinkBorderRange(XSSFRow row, int start, int end, CellStyle linkBorderStyle) {
+        for (int i = start; i < end; i++) {
+            ExcelManager.createStyledCell(row, i, linkBorderStyle);
+        }
+    }
+
+    private static void fillLinkBorderSpan(XSSFRow row, int start, int span, CellStyle linkBorderStyle) {
+        for (int i = start; i < start + span; i++) {
+            ExcelManager.createStyledCell(row, i, linkBorderStyle);
         }
     }
 
