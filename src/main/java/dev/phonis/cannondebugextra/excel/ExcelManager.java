@@ -24,14 +24,11 @@ import java.util.stream.Collectors;
 public class ExcelManager {
 
     public static final BlockingQueue<CDHistory> historyQueue = new LinkedBlockingQueue<>();
-    private static final File excelFolder = new File("cannondebug/");
     private static final String TNTString = "TNT";
     private static final String fallingBlockString = "SAND";
     private static final String otherString = "OTHER";
 
     static {
-        if (excelFolder.mkdirs()) System.out.println("Creating excel directory.");
-
         new Thread(ExcelManager::loop).start();
     }
 
@@ -210,7 +207,7 @@ public class ExcelManager {
 
     private static void writeToFile(XSSFWorkbook workbook) {
         try {
-            File excelFile = new File(ExcelManager.excelFolder, "history" + UUID.randomUUID().toString().replace("-", "") + ".xlsx");
+            File excelFile = File.createTempFile("history", ".xlsx");
             FileOutputStream fileOut = new FileOutputStream(excelFile);
 
             workbook.write(fileOut);
