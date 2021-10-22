@@ -5,6 +5,8 @@ import dev.phonis.cannondebugextra.excel.ExcelManager;
 import net.minecraft.network.INetHandler;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.ForkJoinPool;
 
 public class CDChannel extends PluginChannel {
@@ -60,6 +62,11 @@ public class CDChannel extends PluginChannel {
 
             if (this.historyBuilder.isReady()) {
                 CDHistory history = this.historyBuilder.getHistory();
+//                FileOutputStream fos = new FileOutputStream("testcase.cdhistory");
+//                DataOutputStream dos = new DataOutputStream(fos);
+//
+//                history.toBytes(dos);
+//                dos.close();
 
                 try {
                     ExcelManager.historyQueue.put(history);
